@@ -7,6 +7,7 @@ import { setSession, isMobile } from "~/utils"
 import MessageContainer from "./MessageContainer"
 import InputBox, { defaultInputBoxHeight } from "./InputBox"
 import { type FakeRoleUnion, setActionState } from "./SettingAction"
+import { defaultEnv } from "~/env"
 
 const SearchParamKey = "q"
 
@@ -74,8 +75,33 @@ export default function () {
       archiveCurrentMessage()
     }
   }
-
+  function checkAuth(){
+   if(isPass()) return true  
+    const count = incremental()
+    if(Number(count) >= 5 ){
+      alert('你的次数已超过限制')
+      return false
+    }
+    return true
+  }
+  function incremental(){
+    const count = window.localStorage.getItem('count') || 0
+    const res = String(Number(count)+1)
+    window.localStorage.setItem('count', res)
+    return res
+  }
+  function isPass(){
+    const globalSettings = localStorage.getItem(
+      LocalStorageKey.GLOBALSETTINGS
+    )
+    const passwordSet = process.env.PASSWORD || defaultEnv.PASSWORD
+    const localKey = process.env.OPENAI_API_KEY || ""
+    const isLogin = globalSettings ? JSON.parse(globalSettings)?.password == passwordSet : false
+    if(!isLogin && !localKey)return false
+    return true
+  }
   async function sendMessage(value?: string, fakeRole?: FakeRoleUnion) {
+    if(!checkAuth())return 
     const inputValue = value ?? store.inputContent
     if (!inputValue) return
     setStore("inputContent", "")
