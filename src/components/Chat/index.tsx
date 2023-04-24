@@ -75,6 +75,7 @@ export default function () {
       archiveCurrentMessage()
     }
   }
+
   function checkAuth(){
    if(isPass()) return true  
     const count = incremental()
@@ -84,26 +85,48 @@ export default function () {
     }
     return true
   }
+  
   function incremental(){
     const count = window.localStorage.getItem('count') || 0
     const res = String(Number(count)+1)
     window.localStorage.setItem('count', res)
     return res
   }
+  
   function isPass(){
     const globalSettings = localStorage.getItem(
       LocalStorageKey.GLOBALSETTINGS
     )
     const passwordSet = process.env.PASSWORD || defaultEnv.PASSWORD
     const localKey = process.env.OPENAI_API_KEY || ""
-    const isLogin = globalSettings ? JSON.parse(globalSettings)?.password == passwordSet : false
+    const isLogin = localKey && globalSettings ? 
+      JSON.parse(globalSettings)?.password == passwordSet :
+      false
     if(!isLogin && !localKey)return false
     return true
   }
+  
+  async function validMsg(msg:string){
+    const res = await fetch('https://api.itapi.cn/api/badword/query',{
+      method:"POST",
+      headers:{
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+      },
+      body:`key=1LaPWXd0WR7VT9fHAxSXiTq2gl&word=${msg}`
+    }).then(res=>res.json()).then(res=>res.data)
+    if(res.conclusion_type !== 1){
+      alert('你的内容中有敏感信息！')
+      return false
+    }
+    return true
+  }
+  
   async function sendMessage(value?: string, fakeRole?: FakeRoleUnion) {
-    if(!checkAuth())return 
     const inputValue = value ?? store.inputContent
     if (!inputValue) return
+    if(!await validMsg(inputValue)) return
+    if(!checkAuth())return 
+
     setStore("inputContent", "")
     if (fakeRole === "assistant") {
       setActionState("fakeRole", "normal")
